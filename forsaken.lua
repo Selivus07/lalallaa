@@ -4,6 +4,7 @@
 
 local Players = game:GetService("Players")
 local SoundService = game:GetService("SoundService")
+local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
 local DebugNotifications = getgenv and getgenv().DebugNotifications or false
 local VirtualBallsManager = game:GetService('VirtualInputManager')
 local BlockRemote = game:GetService("ReplicatedStorage").Modules.Network.RemoteEvent
@@ -12,13 +13,21 @@ local SigmaData, JoinedSigmaServer = {}, false
 local HttpService = game:GetService("HttpService")
 local Mercury = loadstring(game:HttpGet("https://raw.githubusercontent.com/deeeity/mercury-lib/master/src.lua"))()
 local Sense = loadstring(game:HttpGet('https://sirius.menu/sense'))()
-local GUI, PlayerTab, VisualsTab, GeneratorTab, BlatantTab, BabyShark, KillerFartPart, HRP, SkibidiDistance, BlockEnabled = Mercury:Create{ Name = "FartSaken", Size = UDim2.fromOffset(600, 400), Theme = Mercury.Themes.Dark, Link = "https://github.com/ivannetta/ShitScripts/Forsaken" }, nil, nil, nil, nil, nil, nil, nil, 6, false
+local GUI = Mercury:Create{ Name = "FartSaken", Size = UDim2.fromOffset(600, 400), Theme = Mercury.Themes.Dark, Link = "https://github.com/ivannetta/ShitScripts/Forsaken" }
+local PlayerTab, VisualsTab, GeneratorTab, BlatantTab, MiscTab = nil, nil, nil, nil, nil
+local BabyShark, KillerFartPart, HRP = nil, nil, nil
+local SkibidiDistance, BlockEnabled = 6, false
 local executorname = (pcall(function() return getexecutorname() end) and getexecutorname()) or (pcall(function() return identifyexecutor() end) and identifyexecutor()) or "Unknown"
 local supportedExecutors = { AWP = true, Wave = true, Nihon = true, ["Synapse Z"] = true, Swift = true }
 local SoundList = {"rbxassetid://112809109188560", "rbxassetid://101199185291628", "rbxassetid://102228729296384", "rbxassetid://140242176732868"}
 local CurrentFartsActive = {}
 local NameProtectNames = {}
+local aimbotActive = false
+local animTracks = {}
+local sounds = {}
+local survivorSpeedSettings = {}
 local skibussy
+
 
 local function ToggleFatMan(state)
     if state then
@@ -38,7 +47,7 @@ local function ToggleFatMan(state)
 
         local VideoFrame = Instance.new("VideoFrame", Frame)
         VideoFrame.Size = UDim2.new(1, 0, 1, 0)
-        VideoFrame.Video = getcustomasset("FartHub/Assets/FatMan.mp4")
+        VideoFrame.Video = getcustomasset("FartHub/Assets/flamingo.mp4")
         VideoFrame.Looped = true
         VideoFrame.Playing = true
     else
@@ -126,6 +135,196 @@ end
 
 CheckIfFartsDownloaded()
 
+local function setSurvivorSpeedMultiplier(multiplier)
+    for _, survivor in pairs(workspace.Players.Survivors:GetChildren()) do
+        if survivor and survivor:FindFirstChild("SpeedMultipliers") then
+            local sprinting = survivor.SpeedMultipliers:FindFirstChild("Sprinting")
+            if sprinting then
+                -- Store the original speed multiplier to restore later
+                if not survivorSpeedSettings[survivor.Name] then
+                    survivorSpeedSettings[survivor.Name] = sprinting.Value
+                end
+                sprinting.Value = multiplier
+            end
+        end
+    end
+end
+
+local function PlayQuiet(state)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local head = character:WaitForChild("Head")
+
+    -- Define animation and sound properties
+    local animationId = "rbxassetid://100986631322204"
+    local soundId = "rbxassetid://131936418953291"
+
+    -- Check if sound already exists, otherwise create a new one
+    if not sounds["Quiet"] then
+        local sound = Instance.new("Sound")
+        sound.SoundId = soundId
+        sound.Looped = true
+        sound.Parent = head
+        sounds["Quiet"] = sound
+    end
+
+    -- Check if animation track exists, otherwise create it
+    if not animTracks["Quiet"] then
+        local animation = Instance.new("Animation")
+        animation.AnimationId = animationId
+        local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+        local animTrack = animator:LoadAnimation(animation)
+        animTracks["Quiet"] = animTrack
+    end
+
+    -- Toggle the state of animation and sound
+    if state then
+        animTracks["Quiet"]:Play()
+        sounds["Quiet"]:Play()
+        setSurvivorSpeedMultiplier(0)  -- Set the speed multiplier to 0 when emote is active
+    else
+        animTracks["Quiet"]:Stop()
+        sounds["Quiet"]:Stop()
+        setSurvivorSpeedMultiplier(1)  -- Restore the speed multiplier to default when emote stops
+    end
+end
+
+local function PlayShucks(state)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local head = character:WaitForChild("Head")
+
+    -- Define animation and sound properties
+    local animationId = "rbxassetid://74238051754912"
+    local soundId = "rbxassetid://123236721947419"
+
+    -- Check if sound already exists, otherwise create a new one
+    if not sounds["Shucks"] then
+        local sound = Instance.new("Sound")
+        sound.SoundId = soundId
+        sound.Looped = true
+        sound.Parent = head
+        sounds["Shucks"] = sound
+    end
+
+    -- Check if animation track exists, otherwise create it
+    if not animTracks["Shucks"] then
+        local animation = Instance.new("Animation")
+        animation.AnimationId = animationId
+        local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+        local animTrack = animator:LoadAnimation(animation)
+        animTracks["Shucks"] = animTrack
+    end
+
+    -- Toggle the state of animation and sound
+    if state then
+        animTracks["Shucks"]:Play()
+        sounds["Shucks"]:Play()
+        setSurvivorSpeedMultiplier(0)  -- Set the speed multiplier to 0 when emote is active
+    else
+        animTracks["Shucks"]:Stop()
+        sounds["Shucks"]:Stop()
+        setSurvivorSpeedMultiplier(1)  -- Restore the speed multiplier to default when emote stops
+    end
+end
+
+local function PlaySub(state)
+    local player = game.Players.LocalPlayer
+    local character = player.Character or player.CharacterAdded:Wait()
+    local humanoid = character:WaitForChild("Humanoid")
+    local head = character:WaitForChild("Head")
+
+    -- Define animation and sound properties
+    local animationId = "rbxassetid://87482480949358"
+    local soundId = "rbxassetid://132297506693854"
+
+    -- Check if sound already exists, otherwise create a new one
+    if not sounds["Sub"] then
+        local sound = Instance.new("Sound")
+        sound.SoundId = soundId
+        sound.Looped = true
+        sound.Parent = head
+        sounds["Sub"] = sound
+    end
+
+    -- Check if animation track exists, otherwise create it
+    if not animTracks["Sub"] then
+        local animation = Instance.new("Animation")
+        animation.AnimationId = animationId
+        local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+        local animTrack = animator:LoadAnimation(animation)
+        animTracks["Sub"] = animTrack
+    end
+
+    -- Toggle the state of animation and sound
+    if state then
+        animTracks["Sub"]:Play()
+        sounds["Sub"]:Play()
+        setSurvivorSpeedMultiplier(0)  -- Set the speed multiplier to 0 when emote is active
+    else
+        animTracks["Sub"]:Stop()
+        sounds["Sub"]:Stop()
+        setSurvivorSpeedMultiplier(1)  -- Restore the speed multiplier to default when emote stops
+    end
+end
+
+-- Ensure animations and sounds are reset after the character respawns
+game.Players.LocalPlayer.CharacterAdded:Connect(function(character)
+    -- Wait for character to be fully loaded and set up everything again
+    local humanoid = character:WaitForChild("Humanoid")
+    local head = character:WaitForChild("Head")
+
+    -- Reinitialize sounds and animations for the new character
+    for _, sound in pairs(sounds) do
+        sound.Parent = head
+    end
+
+    -- Ensure the Animator exists and load animations properly
+    local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
+    
+    -- Clear out the previous animation tracks
+    for animName, animTrack in pairs(animTracks) do
+        if animTrack and animTrack.IsPlaying then
+            animTrack:Stop()
+        end
+        animTracks[animName] = nil -- Clear the previous track
+    end
+
+    -- Reload animations for the new character
+    for animName, _ in pairs(animTracks) do
+        local animation = Instance.new("Animation")
+        animation.AnimationId = animTracks[animName].AnimationId
+        animator:LoadAnimation(animation)
+        animTracks[animName] = animator:LoadAnimation(animation)
+    end
+end)
+
+-- Clear and reinitialize animation and sound when character dies
+game.Players.LocalPlayer.CharacterRemoving:Connect(function(character)
+    -- Clear sounds
+    for _, sound in pairs(sounds) do
+        sound:Stop()
+        sound.Parent = nil
+    end
+
+    -- Clear animation tracks
+    for _, animTrack in pairs(animTracks) do
+        if animTrack and animTrack.IsPlaying then
+            animTrack:Stop()
+        end
+    end
+
+    -- Reset the tables
+    sounds = {}
+    animTracks = {}
+
+    -- Reset survivor speeds after death
+    setSurvivorSpeedMultiplier(1)  -- Restore normal speed when character dies
+end)
+
+
 local function NameProtect(state)
     local function updateNames()
         local CurrentSurvivors = game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("TemporaryUI")
@@ -144,7 +343,12 @@ local function NameProtect(state)
                 if People:IsA("Frame") then
                     local randomIndex = indices[math.random(#indices)]
                     local name = NameProtectNames[randomIndex]
-                    People.Icon.Image = getcustomasset("/FartHub/Assets/" .. name .. ".png")
+                    local success, err = pcall(function()
+                        People.Icon.Image = getcustomasset("FartHub/Assets/" .. name .. ".png")
+                    end)
+                    if not success then
+                        GUI:Notification{Title = "Error", Text = err, Duration = 5}
+                    end
                     People.Username.Text = name
                 end
             end
@@ -240,7 +444,7 @@ local function ToggleFarts(state)
             billboard.StudsOffset = Vector3.new(0, 2, 0)
             local textLabel = Instance.new("TextLabel", billboard)
             textLabel.Size = UDim2.new(1, 0, 1, 0)
-            textLabel.Text = obj:GetAttribute("Username") and (obj:GetAttribute("Username") .. " : " .. obj.Name) or obj.Name
+            textLabel.Text = obj:GetAttribute("Username") and obj.Name
             textLabel.TextColor3 = Color3.new(1, 1, 1)
             textLabel.TextStrokeTransparency = 0
             textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -259,7 +463,7 @@ local function ToggleFarts(state)
                 textLabel.TextStrokeTransparency = 0
                 textLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
                 textLabel.Size = UDim2.new(1, 0, 1, 0)
-                textLabel.Text = child:GetAttribute("Username") and (child:GetAttribute("Username") .. " : " ..  child.Name) or child.Name
+                textLabel.Text = child:GetAttribute("Username") and child.Name
                 billboard.AlwaysOnTop = true
                 textLabel.BackgroundTransparency = 1
             end
@@ -351,6 +555,26 @@ local function Do1x1x1x1Popups()
         end
         task.wait(0.1)
     end
+end
+
+local function SetupSurfers(PuzzlesUi)
+    task.wait(.5)
+    local Container = PuzzlesUi:WaitForChild("Container")
+    local GridHolder = Container:WaitForChild("GridHolder")
+    Container:WaitForChild("UIAspectRatioConstraint"):Destroy()
+    Container.Size = UDim2.new(1, 0, 1, 0)
+    GridHolder.Size = UDim2.new(0.625, 0, 0.625, 0)
+    GridHolder.Position = UDim2.new(0.25, 0, 0.5, 0)
+
+    local Surfers = Instance.new("VideoFrame", Container)
+    Surfers.Size = UDim2.new(0.625, 0, 0.625, 0)
+    Surfers.Position = UDim2.new(0.75, 0, 0.5, 0)
+    Surfers.AnchorPoint = Vector2.new(0.5, 0.5)
+    Surfers.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    Surfers.SizeConstraint = Enum.SizeConstraint.RelativeYY
+    Surfers.Video = getcustomasset("FartHub/Assets/SubwaySurfers.mp4")
+    Surfers.Looped = true
+    Surfers.Playing = true
 end
 
 local function SkibidiGenerator(shouldLoop)
@@ -573,6 +797,8 @@ local function InitializeGUI()
     VisualsTab = GUI:Tab{Name = "Visuals", Icon = "rbxassetid://129972183138590"}
     PlayerTab = GUI:Tab{Name = "Player", Icon = "rbxassetid://86412006218107"}
     BlatantTab = GUI:Tab{Name = "Blatant", Icon = "rbxassetid://17183582911"}
+    MiscTab = GUI:Tab{Name = "Misc", Icon = "rbxassetid://17106470268"}
+    
 
     GUI:Credit{Name = "ivannetta", Description = "meowzer", Discord = "ivannetta"}
     GUI:Notification{Title = "NOTE: Default Keybinds:", Text = "DEL to minimize.", Duration = 10}
@@ -607,6 +833,40 @@ local function InitializeGUI()
         Name = "Item Highlight Color",
         Default = itemHighlightColor
     }
+
+    -- The GUI Toggle handling code
+MiscTab:Toggle{
+    Name = "Miss The Quiet",
+    Description = "plays the Miss The Quiet emote, sounds are client side",
+    StartingState = false,
+    Callback = function(state)
+        task.spawn(function()
+            PlayQuiet(state)
+        end)
+    end
+}
+
+MiscTab:Toggle{
+    Name = "Shucks",
+    Description = "plays the Shucks emote, sounds are client side",
+    StartingState = false,
+    Callback = function(state)
+        task.spawn(function()
+            PlayShucks(state)
+        end)
+    end
+}
+
+MiscTab:Toggle{
+    Name = "Subterfuge",
+    Description = "plays the Subterfuge emote, sounds are client side",
+    StartingState = false,
+    Callback = function(state)
+        task.spawn(function()
+            PlaySub(state)
+        end)
+    end
+}
 
     VisualsTab:Toggle{
         Name = "Highlight Objects",
@@ -674,6 +934,63 @@ local function InitializeGUI()
         end
     }
 
+    BlatantTab:Toggle{ -- Credit to R3mii cuz i was lazy to make this 🤣
+    Name = "Aimbot for Killer",
+    Description = "Automatically aims towards the killer, toggles upon key press",
+    StartingState = false,
+    Callback = function(state)
+        aimbotActive = state
+        if aimbotActive then
+            local function activateAimbot()
+                local killersFolder = workspace.Players:FindFirstChild("Killers")
+                if killersFolder then
+                    local killer = nil
+                    for _, model in pairs(killersFolder:GetChildren()) do
+                        if model:IsA("Model") then
+                            killer = model
+                            break
+                        end
+                    end
+
+                    if killer then
+                        local torso = killer:FindFirstChild("Torso")
+                        if torso then
+                            local character = game.Players.LocalPlayer.Character
+                            if character and character:FindFirstChild("HumanoidRootPart") then
+                                local humanoidRootPart = character.HumanoidRootPart
+                                local connection
+                                connection = game:GetService("RunService").RenderStepped:Connect(function()
+                                    if not aimbotActive then
+                                        connection:Disconnect()
+                                        return
+                                    end
+                                    local torsoPosition = torso.Position
+                                    local horizontalDirection = Vector3.new(torsoPosition.X, humanoidRootPart.Position.Y, torsoPosition.Z)
+                                    humanoidRootPart.CFrame = CFrame.lookAt(humanoidRootPart.Position, horizontalDirection)
+                                    local camera = game.Workspace.CurrentCamera
+                                    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
+                                end)
+                                task.delay(3, function()
+                                    connection:Disconnect()
+                                end)
+                            end
+                        end
+                    end
+                end
+            end
+
+            game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+                if not gameProcessed and input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility2.Value] then
+                    task.spawn(activateAimbot)
+                end
+            end)
+        else
+            local camera = game.Workspace.CurrentCamera
+            camera.CameraType = Enum.CameraType.Custom
+        end
+    end
+    }
+
     BlatantTab:Toggle{
         Name = "Auto Block",
         Description = "Automatically Use Block On Guest 1337, Currently only working on M1",
@@ -689,9 +1006,9 @@ local function InitializeGUI()
         end
     }
 
-    BlatantTab:Toggle{
-        Name = "Toggle FatMan",
-        Description = "Toggle FatMan, Very Blatant Feature, Use At Own Risk.",
+    MiscTab:Toggle{
+        Name = "Toggle flimflam",
+        Description = "Toggle FLAMINGOOO AAAA",
         StartingState = false,
         Callback = function(state) ToggleFatMan(state) end
     }
@@ -724,10 +1041,27 @@ local function InitializeGUI()
         end
     }
 
-    PlayerTab:Button{
+    MiscTab:Button{
         Name = "NameProtect",
         Description = "Replaces everyones names and images with pmoon.",
         Callback = function() NameProtect(true) end
+    }
+
+    MiscTab:Button{
+        Name = "Low Attention Span Mode",
+        Description = "adds subway surfers gameplay during generator puzzles",
+        Callback = function()
+            if not _G.LowAttentionSpanModeActivated then
+                _G.LowAttentionSpanModeActivated = true
+                PlayerGui.ChildAdded:Connect(function(child)
+                    if child.Name == "PuzzleUI" then
+                        SetupSurfers(child)
+                    end
+                end)
+            else
+                GUI:Notification{Title = "Already Activated", Text = "Low Attention Span Mode is already activated.", Duration = 3}
+            end
+        end
     }
 
     if not JoinedSigmaServer then
