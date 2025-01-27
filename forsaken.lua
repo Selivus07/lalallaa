@@ -935,61 +935,68 @@ MiscTab:Toggle{
     }
 
     BlatantTab:Toggle{ -- Credit to R3mii cuz i was lazy to make this 🤣
-    Name = "Aimbot for Killer",
-    Description = "Automatically aims towards the killer, toggles upon key press",
+    Name = "Chance Aimbot",
+    Description = "Automatically aims towards the killer upon shooting your gun, only works with chance.",
     StartingState = false,
     Callback = function(state)
-        aimbotActive = state
-        if aimbotActive then
-            local function activateAimbot()
-                local killersFolder = workspace.Players:FindFirstChild("Killers")
-                if killersFolder then
-                    local killer = nil
-                    for _, model in pairs(killersFolder:GetChildren()) do
-                        if model:IsA("Model") then
-                            killer = model
-                            break
-                        end
-                    end
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
 
-                    if killer then
-                        local torso = killer:FindFirstChild("Torso")
-                        if torso then
-                            local character = game.Players.LocalPlayer.Character
-                            if character and character:FindFirstChild("HumanoidRootPart") then
-                                local humanoidRootPart = character.HumanoidRootPart
-                                local connection
-                                connection = game:GetService("RunService").RenderStepped:Connect(function()
-                                    if not aimbotActive then
+        if character and character.Name == "Chance" then
+            aimbotActive = state
+            if aimbotActive then
+                local function activateAimbot()
+                    local killersFolder = workspace.Players:FindFirstChild("Killers")
+                    if killersFolder then
+                        local killer = nil
+                        for _, model in pairs(killersFolder:GetChildren()) do
+                            if model:IsA("Model") then
+                                killer = model
+                                break
+                            end
+                        end
+
+                        if killer then
+                            local torso = killer:FindFirstChild("Torso")
+                            if torso then
+                                local humanoidRootPart = character:FindFirstChild("HumanoidRootPart")
+                                if humanoidRootPart then
+                                    local connection
+                                    connection = game:GetService("RunService").RenderStepped:Connect(function()
+                                        if not aimbotActive then
+                                            connection:Disconnect()
+                                            return
+                                        end
+                                        local torsoPosition = torso.Position
+                                        local horizontalDirection = Vector3.new(torsoPosition.X, humanoidRootPart.Position.Y, torsoPosition.Z)
+                                        humanoidRootPart.CFrame = CFrame.lookAt(humanoidRootPart.Position, horizontalDirection)
+                                        local camera = game.Workspace.CurrentCamera
+                                        camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
+                                    end)
+                                    task.delay(2.5, function()
                                         connection:Disconnect()
-                                        return
-                                    end
-                                    local torsoPosition = torso.Position
-                                    local horizontalDirection = Vector3.new(torsoPosition.X, humanoidRootPart.Position.Y, torsoPosition.Z)
-                                    humanoidRootPart.CFrame = CFrame.lookAt(humanoidRootPart.Position, horizontalDirection)
-                                    local camera = game.Workspace.CurrentCamera
-                                    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
-                                end)
-                                task.delay(2.7, function()
-                                    connection:Disconnect()
-                                end)
+                                    end)
+                                end
                             end
                         end
                     end
                 end
-            end
 
-            game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-                if not gameProcessed and input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility2.Value] then
-                    task.spawn(activateAimbot)
-                end
-            end)
+                game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+                    if not gameProcessed and input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility2.Value] then
+                        task.spawn(activateAimbot)
+                    end
+                end)
+            else
+                local camera = game.Workspace.CurrentCamera
+                camera.CameraType = Enum.CameraType.Custom
+            end
         else
-            local camera = game.Workspace.CurrentCamera
-            camera.CameraType = Enum.CameraType.Custom
+            print("you arent chance retard, aimbot wont work.")
         end
     end
-    }
+}
+
 
     BlatantTab:Toggle{
         Name = "Auto Block",
