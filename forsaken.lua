@@ -13,7 +13,7 @@ local SigmaData, JoinedSigmaServer = {}, false
 local HttpService = game:GetService("HttpService")
 local Mercury = loadstring(game:HttpGet("https://raw.githubusercontent.com/deeeity/mercury-lib/master/src.lua"))()
 local Sense = loadstring(game:HttpGet('https://sirius.menu/sense'))()
-local GUI = Mercury:Create{ Name = "FartSaken", Size = UDim2.fromOffset(600, 400), Theme = Mercury.Themes.Dark, Link = "https://github.com/ivannetta/ShitScripts/Forsaken" }
+local GUI = Mercury:Create{ Name = "FartSaken", Size = UDim2.fromOffset(600, 400), Theme = Mercury.Themes.Dark, Link = "https://guns.lol/remiafterdark" }
 local PlayerTab, VisualsTab, GeneratorTab, BlatantTab, MiscTab = nil, nil, nil, nil, nil
 local BabyShark, KillerFartPart, HRP = nil, nil, nil
 local SkibidiDistance, BlockEnabled = 6, false
@@ -56,7 +56,7 @@ local function ToggleFatMan(state)
 end
 
 local function GetBigBallsList()
-    local url = "https://api.github.com/repos/ivannetta/ShitScripts/git/trees/main?recursive=1"
+    local url = "https://api.github.com/repos/Selivus07/lalallaa/git/trees/main?recursive=1"
     local assetList = {}
 
     local success, errorMessage =
@@ -77,7 +77,7 @@ local function GetBigBallsList()
                     local data = game:GetService("HttpService"):JSONDecode(response.Body)
                     for _, item in ipairs(data.tree) do
                         if item.path:match("^Assets/.+%.png$") or item.path:match("^Assets/.+%.mp4$") then
-                            local rawUrl = "https://raw.githubusercontent.com/ivannetta/ShitScripts/main/" .. item.path
+                            local rawUrl = "https://raw.githubusercontent.com/Selivus07/lalallaa/main/" .. item.path
                             table.insert(assetList, rawUrl)
 
                             local name = item.path:match("Assets/(.+)%.png$")
@@ -970,7 +970,7 @@ MiscTab:Toggle{
                                     local camera = game.Workspace.CurrentCamera
                                     camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
                                 end)
-                                task.delay(3, function()
+                                task.delay(2.7, function()
                                     connection:Disconnect()
                                 end)
                             end
