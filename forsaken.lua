@@ -27,7 +27,8 @@ local animTracks = {}
 local sounds = {}
 local survivorSpeedSettings = {}
 local skibussy
-
+local emoteModulePath = game:GetService("ReplicatedStorage").Assets.Emotes.MissTheQuiet
+local emoteModule = require(emoteModulePath) -- Require the ModuleScript
 
 local function ToggleFatMan(state)
     if state then
@@ -150,85 +151,70 @@ local function setSurvivorSpeedMultiplier(multiplier)
     end
 end
 
+-- Declare sound and animationTrack outside the function
+local sound
+local animationTrack
+
 local function PlayQuiet(state)
-    local player = game.Players.LocalPlayer
+    local player = Players.LocalPlayer
     local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    local head = character:WaitForChild("Head")
+    local humanoid = character:FindFirstChildOfClass("Humanoid") -- Get the humanoid for animation playback
 
-    -- Define animation and sound properties
-    local animationId = "rbxassetid://100986631322204"
-    local soundId = "rbxassetid://131936418953291"
+    -- Define animation and sound properties from the emoteModule
+    local animationId = "rbxassetid://100986631322204" -- Replace with the correct animation ID if needed
 
-    -- Check if sound already exists, otherwise create a new one
-    if not sounds["Quiet"] then
-        local sound = Instance.new("Sound")
-        sound.SoundId = soundId
-        sound.Looped = true
-        sound.Parent = head
-        sounds["Quiet"] = sound
+    -- Check if emote module is available
+    if not emoteModule then
+        warn("Emote module is missing!")
+        return
     end
 
-    -- Check if animation track exists, otherwise create it
-    if not animTracks["Quiet"] then
-        local animation = Instance.new("Animation")
-        animation.AnimationId = animationId
-        local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
-        local animTrack = animator:LoadAnimation(animation)
-        animTracks["Quiet"] = animTrack
-    end
+    -- Call the Created function to attach the Hat, Lighting, and Hands
+    emoteModule.Created(player)
 
-    -- Toggle the state of animation and sound
+    -- Handle sound and animation based on state
     if state then
-        animTracks["Quiet"]:Play()
-        sounds["Quiet"]:Play()
-        setSurvivorSpeedMultiplier(0)  -- Set the speed multiplier to 0 when emote is active
+        -- Play the SFX
+        sound = Instance.new("Sound")
+        sound.SoundId = emoteModule.SFX -- Set the sound ID from the module
+        sound.Parent = character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart -- Attach to the character
+        sound:Play()
+
+        -- Play the animation (if a humanoid exists)
+        if humanoid then
+            local animation = Instance.new("Animation")
+            animation.AnimationId = animationId
+            animationTrack = humanoid:LoadAnimation(animation) -- Load the animation
+            animationTrack:Play() -- Play the animation
+        else
+            warn("Humanoid not found, animation cannot be played!")
+        end
+
+        -- Optional: Set survivor speed multiplier to 0 during emote
+        setSurvivorSpeedMultiplier(0)
+
     else
-        animTracks["Quiet"]:Stop()
-        sounds["Quiet"]:Stop()
-        setSurvivorSpeedMultiplier(1)  -- Restore the speed multiplier to default when emote stops
+        -- Stop and clean up the sound and animation when the emote stops
+        if sound then
+            sound:Stop()  -- Stop the sound
+            sound:Destroy() -- Destroy the sound
+            sound = nil -- Clear the reference
+        end
+        
+        if animationTrack then
+            animationTrack:Stop() -- Stop the animation
+            animationTrack:Destroy() -- Destroy the animation track
+            animationTrack = nil -- Clear the reference
+        end
+
+        -- Optional cleanup after the emote stops
+        emoteModule.Destroyed(player) -- Remove the emote assets
+
+        -- Restore survivor speed multiplier
+        setSurvivorSpeedMultiplier(1)
     end
 end
 
-local function PlayShucks(state)
-    local player = game.Players.LocalPlayer
-    local character = player.Character or player.CharacterAdded:Wait()
-    local humanoid = character:WaitForChild("Humanoid")
-    local head = character:WaitForChild("Head")
-
-    -- Define animation and sound properties
-    local animationId = "rbxassetid://74238051754912"
-    local soundId = "rbxassetid://123236721947419"
-
-    -- Check if sound already exists, otherwise create a new one
-    if not sounds["Shucks"] then
-        local sound = Instance.new("Sound")
-        sound.SoundId = soundId
-        sound.Looped = true
-        sound.Parent = head
-        sounds["Shucks"] = sound
-    end
-
-    -- Check if animation track exists, otherwise create it
-    if not animTracks["Shucks"] then
-        local animation = Instance.new("Animation")
-        animation.AnimationId = animationId
-        local animator = humanoid:FindFirstChildOfClass("Animator") or Instance.new("Animator", humanoid)
-        local animTrack = animator:LoadAnimation(animation)
-        animTracks["Shucks"] = animTrack
-    end
-
-    -- Toggle the state of animation and sound
-    if state then
-        animTracks["Shucks"]:Play()
-        sounds["Shucks"]:Play()
-        setSurvivorSpeedMultiplier(0)  -- Set the speed multiplier to 0 when emote is active
-    else
-        animTracks["Shucks"]:Stop()
-        sounds["Shucks"]:Stop()
-        setSurvivorSpeedMultiplier(1)  -- Restore the speed multiplier to default when emote stops
-    end
-end
 
 local function PlaySub(state)
     local player = game.Players.LocalPlayer
@@ -934,115 +920,111 @@ MiscTab:Toggle{
         end
     }
 
-    local AllowedThingies = {
-        Killers = {
-            ["1x1x1x1"] = {"AltAbility1", "AltAbility2"},
-            ["JohnDoe"] = {"AltAbility1"}
-        },
-        Survivors = {
-            ["Chance"] = {"AltAbility2"}
+BlatantTab:Toggle{
+    Name = "Chance / Killer Aimbot",
+    Description = "Targets the closest survivor or killer based on your character type and key inputs.",
+    StartingState = false,
+    Callback = function(state)
+        local aimbotActive = state
+        local player = game:GetService("Players").LocalPlayer
+        local character = player.Character or player.CharacterAdded:Wait()
+
+        local allowedKillerNames = {"1x1x1x1", "JohnDoe"}
+        local AimLockTimers = {
+            JohnDoe = 3,   -- Aimbot duration for JohnDoe
+            ["1x1x1x1"] = 4,   -- Aimbot duration for 1x1x1x1
+            default = 2.5  -- Default aimbot duration
         }
-    }
 
-    BlatantTab:Toggle{ -- Credit to R3mii cuz i was lazy to make this 🤣
-        Name = "Aimbot",
-        Description = "Automatically aims towards the target, toggles upon key press",
-        StartingState = false,
-        Callback = function(state)
-            aimbotActive = state
-            print("Aimbot state changed:", state)
-            if aimbotActive then
-                print("Aimbot activated")
-                local function activateAimbot()
-                    print("Activating aimbot...")
-                    local localPlayer = game.Players.LocalPlayer
-                    local character = localPlayer.Character
-                    if not character then
-                        print("No character found")
-                        return
-                    end
-
-                    local target = nil
-                    if character.Parent == workspace.Players.Survivors then
-                        print("Player is a Survivor")
-                        local killersFolder = workspace.Players:FindFirstChild("Killers")
-                        if killersFolder then
-                            for _, model in pairs(killersFolder:GetChildren()) do
-                                if model:IsA("Model") then
-                                    target = model
-                                    print("Target found:", model.Name)
-                                    break
-                                end
-                            end
-                        end
-                    elseif character.Parent == workspace.Players.Killers then
-                        print("Player is a Killer")
-                        local survivorsFolder = workspace.Players:FindFirstChild("Survivors")
-                        if survivorsFolder then
-                            local closestDistance = math.huge
-                            for _, model in pairs(survivorsFolder:GetChildren()) do
-                                if model:IsA("Model") then
-                                    local distance = (model.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
-                                    if distance < closestDistance then
-                                        closestDistance = distance
-                                        target = model
-                                        print("Closest target found:", model.Name)
-                                    end
-                                end
-                            end
-                        end
-                    end
-
-                    if target and target:FindFirstChild("HumanoidRootPart") then
-                        print("Target HumanoidRootPart found")
-                        local targetHRP = target.HumanoidRootPart
-                        local connection
-                        connection = game:GetService("RunService").RenderStepped:Connect(function()
-                            if not aimbotActive then
-                                print("Aimbot deactivated, disconnecting")
-                                connection:Disconnect()
-                                return
-                            end
-                            local targetPosition = targetHRP.Position
-                            local horizontalDirection = Vector3.new(targetPosition.X, character.HumanoidRootPart.Position.Y, targetPosition.Z)
-                            character.HumanoidRootPart.CFrame = CFrame.lookAt(character.HumanoidRootPart.Position, horizontalDirection)
-                            local camera = game.Workspace.CurrentCamera
-                            camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
-                            print("Aiming at target:", target.Name)
-                        end)
-                        task.delay(AimLockTimer, function()
-                            print("Aimbot lock time ended, disconnecting")
-                            connection:Disconnect()
-                        end)
-                    else
-                        print("No valid target found")
-                    end
+        local function checkCharacter()
+            while true do
+                if player.Character ~= character then
+                    character = player.Character  -- Update character reference
                 end
-
-                game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
-                    if not gameProcessed then
-                        local character = game.Players.LocalPlayer.Character
-                        local role = character.Parent == workspace.Players.Survivors and "Survivors" or "Killers"
-                        local characterName = character.Name
-                        local allowedAbilities = AllowedThingies[role] and AllowedThingies[role][characterName]
-                        if allowedAbilities then
-                            for _, ability in ipairs(allowedAbilities) do
-                                local keybind = game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds:FindFirstChild(ability)
-                                if keybind and input.KeyCode == Enum.KeyCode[keybind.Value] then
-                                    task.spawn(activateAimbot)
-                                    break
-                                end
-                            end
-                        end
-                    end
-                end)
-            else
-                print("Aimbot deactivated")
-                local camera = game.Workspace.CurrentCamera
-                camera.CameraType = Enum.CameraType.Custom
+                task.wait(1)  -- Check every second for character switch
             end
         end
-    }
+
+        local function activateAimbot()
+            local target = nil
+            local characterName = character.Name
+            local AimLockTimer = AimLockTimers[characterName] or AimLockTimers.default  -- Get custom duration based on character name
+
+            if character.Parent == workspace.Players:WaitForChild("Survivors") then
+                local killersFolder = workspace.Players:WaitForChild("Killers")
+                if killersFolder then
+                    for _, model in pairs(killersFolder:GetChildren()) do
+                        if model:IsA("Model") then
+                            target = model
+                            break
+                        end
+                    end
+                end
+            elseif character.Parent == workspace.Players:WaitForChild("Killers") then
+                local survivorsFolder = workspace.Players:WaitForChild("Survivors")
+                if survivorsFolder then
+                    local closestDistance = math.huge
+                    for _, model in pairs(survivorsFolder:GetChildren()) do
+                        if model:IsA("Model") then
+                            local distance = (model.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
+                            if distance < closestDistance then
+                                closestDistance = distance
+                                target = model
+                            end
+                        end
+                    end
+                end
+            end
+
+            if target and target:FindFirstChild("HumanoidRootPart") then
+                local targetHRP = target.HumanoidRootPart
+                local connection
+                connection = game:GetService("RunService").RenderStepped:Connect(function()
+                    if not aimbotActive then
+                        connection:Disconnect()
+                        return
+                    end
+                    local targetPosition = targetHRP.Position
+                    local horizontalDirection = Vector3.new(targetPosition.X, character.HumanoidRootPart.Position.Y, targetPosition.Z)
+                    character.HumanoidRootPart.CFrame = CFrame.lookAt(character.HumanoidRootPart.Position, horizontalDirection)
+                    local camera = game.Workspace.CurrentCamera
+                    camera.CFrame = CFrame.lookAt(camera.CFrame.Position, horizontalDirection)
+                end)
+
+                task.delay(AimLockTimer, function()
+                    connection:Disconnect()
+                end)
+            end
+        end
+
+        game:GetService("UserInputService").InputBegan:Connect(function(input, gameProcessed)
+            if not gameProcessed then
+                if character.Name == "Chance" then
+                    if input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility2.Value] then
+                        task.spawn(activateAimbot)
+                    end
+                elseif character.Name == "JohnDoe" then
+                    -- Only activate AltAbility1 for JohnDoe
+                    if input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility1.Value] then
+                        task.spawn(activateAimbot)
+                    end
+                elseif character.Name == "1x1x1x1" then
+                    -- Both AltAbility1 and AltAbility2 can be activated for 1x1x1x1
+                    if input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility1.Value] or
+                        input.KeyCode == Enum.KeyCode[game:GetService("Players").LocalPlayer.PlayerData.Settings.Keybinds.AltAbility2.Value] then
+                        task.spawn(activateAimbot)
+                    end
+                else
+                    GUI:Notification{Title = "Aimbot not activated", Text = "Character is not allowed.", Duration = 10}
+                end
+            end
+        end)
+
+        task.spawn(checkCharacter)  -- Start checking for character updates
+    end
+}
+
+
 
 
 
